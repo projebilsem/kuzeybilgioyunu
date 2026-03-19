@@ -11,7 +11,7 @@
             --arctic-blue: #a3d8d4;
             --arctic-dark: #1e3a45;
             --ice-white: #ffffff;
-            --water-blue: #bde0fe; /* Alt kısımdaki açık mavi su */
+            --water-blue: #bde0fe; 
             --accent-purple: #9d8db1;
         }
 
@@ -56,7 +56,7 @@
             to { transform: translateY(105vh) translateX(30px); }
         }
 
-        /* Alt Su Alanı (Buzdağlarının yüzdüğü yer) */
+        /* Alt Su Alanı */
         .water-area {
             position: absolute;
             bottom: 0; 
@@ -67,7 +67,7 @@
             z-index: -2;
         }
 
-        /* Buzul Kara Parçası (İgloların durduğu yer) */
+        /* Buzul Kara Parçası */
         .ice-land {
             position: absolute;
             bottom: 38%;
@@ -77,7 +77,7 @@
             z-index: -2;
         }
 
-        /* İglo Çizimi - Kıyı Çizgisinde */
+        /* İglo Çizimi */
         .igloo {
             position: absolute;
             bottom: 38%;
@@ -101,7 +101,7 @@
             border-radius: 20px 20px 0 0;
         }
 
-        /* Hareket Eden Icebergler - Alt Su Alanında */
+        /* Hareket Eden Icebergler */
         .iceberg {
             position: absolute;
             background: white;
@@ -221,19 +221,24 @@
             align-items: center;
             z-index: 100;
         }
+
+        /* Puan Düşüş Efekti */
+        .score-penalty {
+            color: #ef4444;
+            animation: bounce 0.5s ease;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
     </style>
 </head>
 <body>
 
     <div class="background">
-        <!-- İglolar -->
         <div class="igloo" style="left: 6%;"> <div class="igloo-door"></div> </div>
         <div class="igloo" style="right: 6%;"> <div class="igloo-door"></div> </div>
-        
-        <!-- Kar/Buzul Alanı -->
         <div class="ice-land"></div>
-
-        <!-- Su Alanı ve Icebergler -->
         <div class="water-area">
             <div class="iceberg" style="width: 180px; height: 90px; bottom: 15%; animation: driftRight 45s linear infinite;"></div>
             <div class="iceberg" style="width: 130px; height: 65px; bottom: 40%; animation: driftLeft 35s linear infinite;"></div>
@@ -266,7 +271,6 @@
         </div>
     </main>
 
-    <!-- Modal (Seviye ve Bitiş Ekranı) -->
     <div id="modal" class="modal">
         <div class="bg-white p-10 rounded-2xl border-8 border-blue-900 text-center max-w-md shadow-2xl">
             <h2 id="modal-title" class="text-3xl font-black text-blue-900 mb-2">Harika!</h2>
@@ -283,7 +287,6 @@
     </div>
 
     <script>
-        // Hayvan Listesi
         let animals = [
             { name: "BEYAZ TİLKİ", desc: "Kar gibi beyaz kürkü olan, kışın dondurucu tundralarda avlanan çok kurnaz bir avcıdır." },
             { name: "KAR BAYKUŞU", desc: "Bembeyaz tüyleriyle karda kusursuzca kamufle olan, gece yerine gündüz avlanan iri bir kuştur." },
@@ -299,7 +302,6 @@
             { name: "REN GEYİĞİ", desc: "Büyük boynuzları olan, kar altındaki likenleri bularak beslenen ve dev sürülerle göç eden bir hayvandır." }
         ];
 
-        // Listeyi Karıştır (Fisher-Yates Shuffle)
         function shuffle(array) {
             for (let i = array.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -317,7 +319,6 @@
         let currentLevel = 0;
         let score = 0;
         let guessedLetters = [];
-        let wrongGuesses = 0;
         let isGameOver = false;
 
         function createSnow() {
@@ -335,7 +336,6 @@
 
         function initGame() {
             guessedLetters = [];
-            wrongGuesses = 0;
             const currentAnimal = animals[currentLevel];
             document.getElementById('description').innerText = currentAnimal.desc;
             document.getElementById('level-display').innerText = `${currentLevel + 1} / ${animals.length}`;
@@ -385,9 +385,20 @@
                 });
             } else {
                 btn.classList.add('wrong');
-                wrongGuesses++;
+                // YANLIŞ HARF CEZASI: Yanlış tıklayınca puanı düşür
+                score = Math.max(0, score - 15);
+                updateScoreDisplay(true);
             }
             checkWin();
+        }
+
+        function updateScoreDisplay(isPenalty = false) {
+            const display = document.getElementById('score-display');
+            display.innerText = score;
+            if (isPenalty) {
+                display.classList.add('score-penalty');
+                setTimeout(() => display.classList.remove('score-penalty'), 500);
+            }
         }
 
         function checkWin() {
@@ -396,17 +407,16 @@
             if (win) {
                 setTimeout(() => {
                     const animalName = animals[currentLevel].name.replace(/\s/g, '');
-                    const levelPoints = (animalName.length * 15) + 50 - (wrongGuesses * 5);
-                    const finalPoints = Math.max(20, levelPoints);
-                    
-                    score += finalPoints;
-                    document.getElementById('score-display').innerText = score;
+                    // DOĞRU BİLİNCE VERİLEN PUAN: Kelime uzunluğuyla orantılı
+                    const levelBonus = animalName.length * 25;
+                    score += levelBonus;
+                    updateScoreDisplay();
 
                     if (currentLevel === animals.length - 1) {
                         isGameOver = true;
                         showFinalModal();
                     } else {
-                        document.getElementById('earned-points').innerText = `+${finalPoints} PUAN`;
+                        document.getElementById('earned-points').innerText = `+${levelBonus} PUAN`;
                         document.getElementById('modal-desc').innerText = `Doğru bildin: ${animals[currentLevel].name}`;
                         document.getElementById('modal').style.display = 'flex';
                     }
@@ -416,7 +426,7 @@
 
         function showFinalModal() {
             document.getElementById('modal-title').innerText = "TEBRİKLER!";
-            document.getElementById('modal-desc').innerText = "Tüm kuzey hayvanlarını başarıyla tanıdın ve macerayı tamamladın.";
+            document.getElementById('modal-desc').innerText = "Tüm kuzey hayvanlarını başarıyla tanıdın!";
             document.getElementById('earned-points').classList.add('hidden');
             document.getElementById('final-stats').classList.remove('hidden');
             document.getElementById('total-final-score').innerText = score;
