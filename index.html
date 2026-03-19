@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuzey Yaşamı: Bilgi Oyunu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --arctic-blue: #a3d8d4;
+            --arctic-dark: #1e3a45;
+            --ice-white: #ffffff;
+            --water-blue: #bde0fe; /* Alt kısımdaki açık mavi su */
+            --accent-purple: #9d8db1;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--arctic-blue);
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            color: var(--arctic-dark);
+        }
+
+        /* Arka Plan */
+        .background {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -2;
+            background: linear-gradient(to bottom, #d6f2f0 0%, #a3d8d4 100%);
+        }
+
+        /* Kar Yağışı */
+        .snow-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .snowflake {
+            position: absolute;
+            top: -10px;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.8;
+            animation: fall linear infinite;
+        }
+
+        @keyframes fall {
+            to { transform: translateY(105vh) translateX(30px); }
+        }
+
+        /* Alt Su Alanı (Buzdağlarının yüzdüğü yer) */
+        .water-area {
+            position: absolute;
+            bottom: 0; 
+            width: 100%; 
+            height: 38%; 
+            background: var(--water-blue);
+            border-top: 5px solid #ffffff;
+            z-index: -2;
+        }
+
+        /* Buzul Kara Parçası (İgloların durduğu yer) */
+        .ice-land {
+            position: absolute;
+            bottom: 38%;
+            width: 100%;
+            height: 100px;
+            background: #f1f9f9;
+            z-index: -2;
+        }
+
+        /* İglo Çizimi - Kıyı Çizgisinde */
+        .igloo {
+            position: absolute;
+            bottom: 38%;
+            width: 130px;
+            height: 70px;
+            background: #ffffff;
+            border-radius: 80px 80px 0 0;
+            border: 2px solid #cbd5e1;
+            box-shadow: inset -10px -5px 0 #f1f5f9;
+            z-index: -1;
+        }
+
+        .igloo-door {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 22px;
+            background: #1e3a45;
+            border-radius: 20px 20px 0 0;
+        }
+
+        /* Hareket Eden Icebergler - Alt Su Alanında */
+        .iceberg {
+            position: absolute;
+            background: white;
+            clip-path: polygon(10% 90%, 20% 50%, 50% 15%, 80% 50%, 95% 90%);
+            opacity: 0.9;
+            z-index: -1;
+        }
+
+        @keyframes driftRight {
+            from { left: -250px; }
+            to { left: 110%; }
+        }
+
+        @keyframes driftLeft {
+            from { right: -250px; }
+            to { right: 110%; }
+        }
+
+        /* Başlık */
+        .game-title {
+            font-weight: 800;
+            font-size: 2.4rem;
+            color: #1e3a45;
+            margin-top: 25px;
+            text-shadow: 2px 2px 0px white;
+            z-index: 10;
+        }
+
+        /* Bilgi Kutusu */
+        .pixel-box {
+            background-color: rgba(30, 58, 69, 0.9);
+            border: 4px solid #1e3a45;
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 750px;
+            width: 90%;
+            margin-top: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .letter-slot {
+            width: 45px;
+            height: 55px;
+            background-color: var(--accent-purple);
+            border: 3px solid #5d4a77;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            text-transform: uppercase;
+        }
+
+        /* Klavye */
+        .keyboard-container {
+            margin-top: auto;
+            padding-bottom: 25px;
+            z-index: 20;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        .keyboard {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .keyboard-row {
+            display: flex;
+            gap: 5px;
+        }
+
+        .key {
+            min-width: 42px;
+            height: 48px;
+            background: white;
+            border: 2px solid var(--arctic-dark);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 800;
+            color: var(--arctic-dark);
+            box-shadow: 0 4px 0 var(--arctic-dark);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+        }
+
+        .key:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--arctic-dark); }
+        .key.correct { background: #4ade80; color: white; border-color: #166534; box-shadow: 0 4px 0 #166534; }
+        .key.wrong { background: #f87171; color: white; opacity: 0.6; cursor: not-allowed; border-color: #991b1b; }
+
+        /* UI Paneller */
+        .ui-panel {
+            background: white;
+            padding: 8px 16px;
+            border-radius: 12px;
+            border: 3px solid var(--arctic-dark);
+            box-shadow: 4px 4px 0 var(--arctic-dark);
+            position: absolute;
+            top: 20px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="background">
+        <!-- İglolar -->
+        <div class="igloo" style="left: 6%;"> <div class="igloo-door"></div> </div>
+        <div class="igloo" style="right: 6%;"> <div class="igloo-door"></div> </div>
+        
+        <!-- Kar/Buzul Alanı -->
+        <div class="ice-land"></div>
+
+        <!-- Su Alanı ve Icebergler -->
+        <div class="water-area">
+            <div class="iceberg" style="width: 180px; height: 90px; bottom: 15%; animation: driftRight 45s linear infinite;"></div>
+            <div class="iceberg" style="width: 130px; height: 65px; bottom: 40%; animation: driftLeft 35s linear infinite;"></div>
+        </div>
+    </div>
+
+    <div class="snow-container" id="snow"></div>
+
+    <h1 class="game-title">KUZEY YAŞAMI BİLGİ OYUNU</h1>
+
+    <div class="ui-panel" style="left: 20px;">
+        <div class="text-[10px] uppercase font-bold text-gray-400">SEVİYE</div>
+        <div id="level-display" class="text-xl font-bold text-blue-900">1 / 12</div>
+    </div>
+
+    <div class="ui-panel" style="right: 20px;">
+        <div class="text-[10px] uppercase font-bold text-gray-400">PUAN</div>
+        <div id="score-display" class="text-xl font-bold text-blue-900">0</div>
+    </div>
+
+    <main class="flex flex-col items-center z-10 w-full flex-1">
+        <div class="pixel-box">
+            <p id="description" class="text-lg md:text-xl font-medium">Yükleniyor...</p>
+        </div>
+
+        <div id="word-container" class="flex flex-wrap justify-center gap-2 mt-12"></div>
+
+        <div class="keyboard-container">
+            <div id="keyboard" class="keyboard"></div>
+        </div>
+    </main>
+
+    <!-- Modal (Seviye ve Bitiş Ekranı) -->
+    <div id="modal" class="modal">
+        <div class="bg-white p-10 rounded-2xl border-8 border-blue-900 text-center max-w-md shadow-2xl">
+            <h2 id="modal-title" class="text-3xl font-black text-blue-900 mb-2">Harika!</h2>
+            <p id="modal-desc" class="text-gray-600 mb-4"></p>
+            <div id="earned-points" class="text-3xl font-black text-green-600 mb-6">+0 PUAN</div>
+            <div id="final-stats" class="hidden mb-8 p-4 bg-blue-50 rounded-xl border-2 border-blue-200">
+                <p class="text-blue-800 font-bold uppercase text-xs mb-1">TOPLAM SKORUN</p>
+                <p id="total-final-score" class="text-5xl font-black text-blue-900">0</p>
+            </div>
+            <button id="modal-btn" onclick="nextLevel()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-12 rounded-full shadow-lg transition-all transform hover:scale-105">
+                SONRAKİ HAYVAN
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Hayvan Listesi
+        let animals = [
+            { name: "BEYAZ TİLKİ", desc: "Kar gibi beyaz kürkü olan, kışın dondurucu tundralarda avlanan çok kurnaz bir avcıdır." },
+            { name: "KAR BAYKUŞU", desc: "Bembeyaz tüyleriyle karda kusursuzca kamufle olan, gece yerine gündüz avlanan iri bir kuştur." },
+            { name: "KUTUP AYISI", desc: "Arktik bölgesinin kralı sayılan, beyaz kürklü ve dünyanın en büyük kara etçilidir." },
+            { name: "KUTUP KURDU", desc: "Sürüler halinde yaşayan, bembeyaz postu sayesinde soğuğa ve rüzgara çok dayanıklı bir avcıdır." },
+            { name: "KUTUP TAVŞANI", desc: "Çok hızlı koşabilen, uzun kulaklı ve kış aylarında postu bembeyaz olan bir kemirgendir." },
+            { name: "KUTUP SUMRUSU", desc: "Her yıl dünyanın bir ucundan diğerine uçan, en uzun göç yolculuğunu yapan narin bir kuştur." },
+            { name: "FOK", desc: "Buzların üzerinde güneşlenen, suda çok hızlı hareket eden sevimli ve yüzgeç ayaklı bir memelidir." },
+            { name: "MİSK ÖKÜZÜ", desc: "Uzun ve çok kalın tüyleri olan, tehlike anında yavrularını korumak için çember oluşturan iri bir otoburdur." },
+            { name: "MORS", desc: "Kuzey Kutbu'nun dondurucu sularında yaşayan, devasa fildişleri ve hassas bıyıklarıyla tanınan iri cüsseli bir deniz memelisidir." },
+            { name: "NARVAL", desc: "Alnında çok uzun ve spiral bir dişi bulunan, 'deniz tek boynuzu' olarak bilinen gizemli bir balinadır." },
+            { name: "PUFLA", desc: "Çok soğuk sulara dalarak beslenen ve yumuşacık tüyleriyle meşhur olan iri bir ördek türüdür." },
+            { name: "REN GEYİĞİ", desc: "Büyük boynuzları olan, kar altındaki likenleri bularak beslenen ve dev sürülerle göç eden bir hayvandır." }
+        ];
+
+        // Listeyi Karıştır (Fisher-Yates Shuffle)
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+        shuffle(animals);
+
+        const qLayout = [
+            ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "Ğ", "Ü"],
+            ["A", "S", "D", "F", "G", "H", "J", "K", "L", "Ş", "İ"],
+            ["Z", "X", "C", "V", "B", "N", "M", "Ö", "Ç"]
+        ];
+
+        let currentLevel = 0;
+        let score = 0;
+        let guessedLetters = [];
+        let wrongGuesses = 0;
+        let isGameOver = false;
+
+        function createSnow() {
+            const container = document.getElementById('snow');
+            for(let i = 0; i < 60; i++) {
+                const flake = document.createElement('div');
+                flake.className = 'snowflake';
+                flake.style.left = Math.random() * 100 + 'vw';
+                flake.style.width = flake.style.height = (Math.random() * 4 + 2) + 'px';
+                flake.style.animationDuration = (Math.random() * 5 + 7) + 's';
+                flake.style.animationDelay = (Math.random() * 5) + 's';
+                container.appendChild(flake);
+            }
+        }
+
+        function initGame() {
+            guessedLetters = [];
+            wrongGuesses = 0;
+            const currentAnimal = animals[currentLevel];
+            document.getElementById('description').innerText = currentAnimal.desc;
+            document.getElementById('level-display').innerText = `${currentLevel + 1} / ${animals.length}`;
+            
+            const container = document.getElementById('word-container');
+            container.innerHTML = '';
+            currentAnimal.name.split('').forEach(char => {
+                const slot = document.createElement('div');
+                slot.className = 'letter-slot';
+                if (char === ' ') {
+                    slot.style.visibility = 'hidden';
+                    slot.style.width = '20px';
+                }
+                slot.dataset.char = char;
+                container.appendChild(slot);
+            });
+
+            renderKeyboard();
+        }
+
+        function renderKeyboard() {
+            const container = document.getElementById('keyboard');
+            container.innerHTML = '';
+            qLayout.forEach(row => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'keyboard-row';
+                row.forEach(letter => {
+                    const btn = document.createElement('button');
+                    btn.className = 'key';
+                    btn.innerText = letter;
+                    btn.onclick = () => handleGuess(letter, btn);
+                    rowDiv.appendChild(btn);
+                });
+                container.appendChild(rowDiv);
+            });
+        }
+
+        function handleGuess(letter, btn) {
+            if (guessedLetters.includes(letter) || isGameOver) return;
+            guessedLetters.push(letter);
+            const name = animals[currentLevel].name;
+
+            if (name.includes(letter)) {
+                btn.classList.add('correct');
+                document.querySelectorAll('.letter-slot').forEach(slot => {
+                    if (slot.dataset.char === letter) slot.innerText = letter;
+                });
+            } else {
+                btn.classList.add('wrong');
+                wrongGuesses++;
+            }
+            checkWin();
+        }
+
+        function checkWin() {
+            const slots = document.querySelectorAll('.letter-slot');
+            const win = Array.from(slots).every(s => s.dataset.char === ' ' || s.innerText !== '');
+            if (win) {
+                setTimeout(() => {
+                    const animalName = animals[currentLevel].name.replace(/\s/g, '');
+                    const levelPoints = (animalName.length * 15) + 50 - (wrongGuesses * 5);
+                    const finalPoints = Math.max(20, levelPoints);
+                    
+                    score += finalPoints;
+                    document.getElementById('score-display').innerText = score;
+
+                    if (currentLevel === animals.length - 1) {
+                        isGameOver = true;
+                        showFinalModal();
+                    } else {
+                        document.getElementById('earned-points').innerText = `+${finalPoints} PUAN`;
+                        document.getElementById('modal-desc').innerText = `Doğru bildin: ${animals[currentLevel].name}`;
+                        document.getElementById('modal').style.display = 'flex';
+                    }
+                }, 400);
+            }
+        }
+
+        function showFinalModal() {
+            document.getElementById('modal-title').innerText = "TEBRİKLER!";
+            document.getElementById('modal-desc').innerText = "Tüm kuzey hayvanlarını başarıyla tanıdın ve macerayı tamamladın.";
+            document.getElementById('earned-points').classList.add('hidden');
+            document.getElementById('final-stats').classList.remove('hidden');
+            document.getElementById('total-final-score').innerText = score;
+            document.getElementById('modal-btn').innerText = "TEKRAR OYNA";
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function nextLevel() {
+            if (isGameOver) {
+                location.reload();
+            } else if (currentLevel < animals.length - 1) {
+                currentLevel++;
+                document.getElementById('modal').style.display = 'none';
+                initGame();
+            }
+        }
+
+        window.onload = () => {
+            createSnow();
+            initGame();
+        };
+
+        window.onkeydown = (e) => {
+            let key = e.key.toUpperCase('tr-TR');
+            if(key === 'I') key = 'İ'; 
+            if(key === 'ı') key = 'I';
+            document.querySelectorAll('.key').forEach(k => {
+                if (k.innerText === key) k.click();
+            });
+        };
+    </script>
+</body>
+</html>
